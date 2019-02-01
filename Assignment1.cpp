@@ -1,3 +1,12 @@
+/*
+	Instructions: Compile using:
+			g++ -std=c++11 Assignment1.cpp
+
+	Input to the program is in the csv adjacency
+	list format as described in
+	https://gephi.org/users/supported-graph-formats/csv-format/
+																*/
+
 #include <bits/stdc++.h>
 
 using namespace std;
@@ -149,6 +158,90 @@ void constructMinVertexCover(int u, int par=-1)
 	}
 }
 
+//Minimum Dominating Set
+
+vector<vector<int> > dp_ds, isSelected_ds;
+vector<int> inDominatingSet;
+
+void getDPValues_ds(int u, int par=-1)
+{
+	dp_ds[u][0] = 0;
+	dp_ds[u][1] = 1;
+	dp_ds[u][2] = 0;
+	int min_diff = 0;
+	int min_diff_vertex = -1;
+	for(auto v: adj[u])
+	{
+		if(v==par) continue;
+		getDPValues_ds(v, u);
+		if(dp_ds[v][0] < dp_ds[v][1])
+		{
+			dp_ds[u][0] += dp_ds[v][0];
+			if(min_diff_vertex==-1 || min_diff>(dp_ds[v][1]-dp_ds[v][0]))
+			{
+				min_diff = dp_ds[v][1] - dp_ds[v][0];
+				min_diff_vertex = v;
+			}
+		}
+		else
+		{
+			dp_ds[u][0] += dp_ds[v][1];
+			isSelected_ds[v][0] = 1;
+			if(min_diff_vertex==-1 || min_diff>0)
+			{
+				min_diff = 0;
+				min_diff_vertex = v;
+			}
+		}
+		dp_ds[u][1] += min(dp_ds[v][0], min(dp_ds[v][1], dp_ds[v][2]));
+		if(min(dp_ds[v][0], min(dp_ds[v][1], dp_ds[v][2]))==dp_ds[v][0])
+		{
+			isSelected_ds[v][1] = 0;
+		}
+		else if(min(dp_ds[v][0], min(dp_ds[v][1], dp_ds[v][2]))==dp_ds[v][1])
+		{
+			isSelected_ds[v][1] = 1;
+		}
+		else
+		{
+			isSelected_ds[v][1] = 2;
+		}
+		dp_ds[u][2] += dp_ds[v][0];
+	}
+	if(min_diff_vertex==-1)
+	{
+		dp_ds[u][0] = 1000000;
+	}
+	else
+	{
+		dp_ds[u][0] += min_diff;
+		isSelected_ds[min_diff_vertex][0] = 1;
+	}
+}
+
+void constructMinDominatingSet(int u, int par=-1)
+{
+	if(par==-1)
+	{
+		if(dp_ds[u][0]<dp_ds[u][1])
+		{
+			inDominatingSet[u] = 0;
+		}
+		else inDominatingSet[u] = 1;
+	}
+	else if(inDominatingSet[par] == 2)
+	{
+		inDominatingSet[u] = 0;
+	}
+	else
+	{
+		inDominatingSet[u] = isSelected_ds[u][inDominatingSet[par]];
+	}
+	for(auto v: adj[u])
+	{
+		if(v!=par) constructMinDominatingSet(v, u);
+	}
+}
 
 //Maximum Independent Set
 
@@ -252,6 +345,36 @@ int main()
 	cout<<"\n\n";
 
 	//Minimum Dominating Set
+
+	dp_ds.resize(n);
+	for(int i=0; i<n; i++)
+	{
+		dp_ds[i].resize(3, 0);
+	}
+	isSelected_ds.resize(n);
+	for(int i=0; i<n; i++)
+	{
+		isSelected_ds[i].resize(2, 0);
+	}
+	inDominatingSet.resize(n, 0);
+	getDPValues_ds(0);
+	constructMinDominatingSet(0);
+	int minds_count = 0;
+	for(int i=0; i<n; i++)
+	{
+		if(inDominatingSet[i]%2) minds_count++;
+	}
+	cout<<"The size of the minimum dominating set is "<<minds_count<<" and it contains:\n";
+	for(int i=0; i<n; i++)
+	{
+		if(inDominatingSet[i]%2)
+		{
+			if(minds_count==-1) cout<<", ";
+			cout<<num2vtx[i];
+			minds_count = -1;
+		}
+	}
+	cout<<"\n\n";
 
 	//Maximum Independent Set
 	dp_is.resize(n);
